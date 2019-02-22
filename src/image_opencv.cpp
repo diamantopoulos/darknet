@@ -87,6 +87,119 @@ image get_image_from_stream(void *p)
     return mat_to_image(m);
 }
 
+
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <string>
+#include <vector>
+#include <opencv2/opencv.hpp>
+#include <cstdio>
+
+
+
+    int global_once = 0;
+    int sock, listener;
+    struct sockaddr_in addr;
+
+
+image get_image_from_stream_over_net(void *p)
+{
+
+
+
+
+
+
+
+
+    if (global_once == 0) {
+    //int sock, listener;
+    //struct sockaddr_in addr;
+    std::cerr << "canme to global_once" << std::endl;
+
+    if( (listener = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("[server] socket() failed");
+        exit(1);
+    }
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(5555); // 3425
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    if(bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        perror("[server] binding faild!");
+        exit(2);
+    }
+
+    listen(listener, 1);
+    }
+
+    int X = 640; //640
+    int Y = 480;  //480
+
+    int num_of_recv_bytes;
+    //VideoWriter outputVideo;
+    Size S = Size((int) X,(int) Y);
+    //outputVideo.open("receive.avi", CV_FOURCC('M','J','P','G'), 30, S, true);
+
+    int imgSize = Y*X*3;
+    Mat frame = Mat::zeros(Y, X, CV_8UC3);
+    uchar *iptr = frame.data;
+    int key;
+
+    int cnt=0;
+    //while(1){
+     if (global_once == 0) {
+
+        std::cout << ++cnt<<std::endl;
+        sock = accept(listener, NULL, NULL);
+        if(sock < 0){
+            perror("[server] accept() faild!");
+            exit(3);
+        }
+	global_once++;
+	}
+
+        while(key != 'q') {
+            if( num_of_recv_bytes = recv(sock, iptr, imgSize, MSG_WAITALL) == -1 ) {
+                std::cerr << "recv failed, received bytes = " << num_of_recv_bytes << std::endl;
+            }
+	    std::cout << "waiting, received bytes = " << num_of_recv_bytes << std::endl;
+
+            //outputVideo<< frame;
+            //imshow("server", frame);
+            //if (key = waitKey(100) >= 0) break;
+            break;
+        }
+        //outputVideo.release();
+        //close(sock);
+        //break;
+    //}
+    //return 0;
+
+
+
+
+
+
+
+
+
+
+    //VideoCapture *cap = (VideoCapture *)p; //p
+    Mat m = frame;
+    //*cap >> m;
+    if(m.empty()) {
+        std::cout << "image is empty" << std::endl;
+        return make_empty_image(0,0,0);
+    }
+    return mat_to_image(m);
+}
+
 image load_image_cv(char *filename, int channels)
 {
     int flag = -1;

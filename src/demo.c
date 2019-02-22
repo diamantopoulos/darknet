@@ -140,7 +140,8 @@ void *detect_in_thread(void *ptr)
 void *fetch_in_thread(void *ptr)
 {
     free_image(buff[buff_index]);
-    buff[buff_index] = get_image_from_stream(cap);
+    // buff[buff_index] = get_image_from_stream(cap);
+    buff[buff_index] = get_image_from_stream_over_net(cap);
     if(buff[buff_index].data == 0) {
         demo_done = 1;
         return 0;
