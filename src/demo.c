@@ -203,6 +203,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     srand(2222222);
 
     int i;
+    int stream_from_net = ((cam_index<0) && (!filename));
     demo_total = size_network(net);
     predictions = calloc(demo_frame, sizeof(float*));
     for (i = 0; i < demo_frame; ++i){
@@ -213,43 +214,91 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     if(filename){
         printf("video file: %s\n", filename);
         cap = open_video_stream(filename, 0, 0, 0, 0);
-    }else{
-        cap = open_video_stream(0, cam_index, w, h, frames);
-    }
-
-    if(!cap) error("Couldn't connect to webcam.\n");
-
-    buff[0] = get_image_from_stream(cap);
-    buff[1] = copy_image(buff[0]);
-    buff[2] = copy_image(buff[0]);
-    buff_letter[0] = letterbox_image(buff[0], net->w, net->h);
-    buff_letter[1] = letterbox_image(buff[0], net->w, net->h);
-    buff_letter[2] = letterbox_image(buff[0], net->w, net->h);
-
-    int count = 0;
-    if(!prefix){
-        make_window("Demo", 1352, 1013, fullscreen);
-    }
-
-    demo_time = what_time_is_it_now();
-
-    while(!demo_done){
-        buff_index = (buff_index + 1) %3;
-        if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
-        if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
-        if(!prefix){
-            fps = 1./(what_time_is_it_now() - demo_time);
-            demo_time = what_time_is_it_now();
-            display_in_thread(0);
-        }else{
-            char name[256];
-            sprintf(name, "%s_%08d", prefix, count);
-            save_image(buff[(buff_index + 1)%3], name);
+    }else {
+        if(!stream_from_net)
+            cap = open_video_stream(0, cam_index, w, h, frames);
+        else {
+            printf("Trying fetching stream from network...\n");
         }
-        pthread_join(fetch_thread, 0);
-        pthread_join(detect_thread, 0);
-        ++count;
     }
+
+
+    if (!stream_from_net) {
+        if(!cap) error("Couldn't connect to webcam.\n");
+
+        buff[0] = get_image_from_stream(cap);
+        buff[1] = copy_image(buff[0]);
+        buff[2] = copy_image(buff[0]);
+        buff_letter[0] = letterbox_image(buff[0], net->w, net->h);
+        buff_letter[1] = letterbox_image(buff[0], net->w, net->h);
+        buff_letter[2] = letterbox_image(buff[0], net->w, net->h);
+
+        int count = 0;
+        if(!prefix){
+            make_window("Demo", 1352, 1013, fullscreen);
+        }
+
+        demo_time = what_time_is_it_now();
+
+        while(!demo_done){
+            buff_index = (buff_index + 1) %3;
+            if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+            if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");    
+            if(!prefix){
+                fps = 1./(what_time_is_it_now() - demo_time);
+                demo_time = what_time_is_it_now();
+                display_in_thread(0);
+            }else{
+                char name[256];
+                sprintf(name, "%s_%08d", prefix, count);
+                save_image(buff[(buff_index + 1)%3], name);
+            }
+            pthread_join(fetch_thread, 0);
+            pthread_join(detect_thread, 0);
+            ++count;
+        }
+    } 
+    else {
+
+        buff[0] =get_image_from_stream_over_net(cap);
+        buff[1] = copy_image(buff[0]);
+        buff[2] = copy_image(buff[0]);
+        buff_letter[0] = letterbox_image(buff[0], net->w, net->h);
+        buff_letter[1] = letterbox_image(buff[0], net->w, net->h);    
+        buff_letter[2] = letterbox_image(buff[0], net->w, net->h);
+
+        int count = 0;
+        if(!prefix){
+            make_window("Demo", 1352, 1013, fullscreen);
+        }
+
+        demo_time = what_time_is_it_now();
+    
+        while(!demo_done){
+            buff_index = (buff_index + 1) %3;
+            if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+            if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
+            if(!prefix){
+                fps = 1./(what_time_is_it_now() - demo_time);
+                demo_time = what_time_is_it_now();
+                display_in_thread(0);
+            }else{
+                char name[256];
+                sprintf(name, "%s_%08d", prefix, count);
+                save_image(buff[(buff_index + 1)%3], name);
+            }
+            pthread_join(fetch_thread, 0);
+            pthread_join(detect_thread, 0);
+            ++count;
+        }
+    }
+
+
+
+
+
+
+
 }
 
 /*
