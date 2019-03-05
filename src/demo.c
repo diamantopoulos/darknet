@@ -81,7 +81,7 @@ detection *avg_predictions(network *net, int *nboxes)
     detection *dets = get_network_boxes(net, buff[0].w, buff[0].h, demo_thresh, demo_hier, 0, 1, nboxes);
     return dets;
 }
-
+static int tot_frames=0;
 void *detect_in_thread(void *ptr)
 {
     running = 1;
@@ -124,8 +124,9 @@ void *detect_in_thread(void *ptr)
 
     if (nms > 0) do_nms_obj(dets, nboxes, l.classes, nms);
 
-    printf("\033[2J");
-    printf("\033[1;1H");
+    //printf("\033[2J");
+    //printf("\033[1;1H");
+    printf("\ndemo_index=%d , demo_frame=%d, tot_frames=%d", demo_index, demo_frame, tot_frames++);
     printf("\nFPS:%.1f\n",fps);
     printf("Objects:\n\n");
     image display = buff[(buff_index+2) % 3];
@@ -141,7 +142,20 @@ void *fetch_in_thread(void *ptr)
 {
     free_image(buff[buff_index]);
     // buff[buff_index] = get_image_from_stream(cap);
-    buff[buff_index] = get_image_from_stream_over_net(cap);
+    buff[buff_index] = get_image_from_stream(cap);
+    if(buff[buff_index].data == 0) {
+        demo_done = 1;
+        return 0;
+    }
+    letterbox_image_into(buff[buff_index], net->w, net->h, buff_letter[buff_index]);
+    return 0;
+}
+
+void *fetch_in_thread_over_net(void *ptr)
+{
+    free_image(buff[buff_index]);
+    // buff[buff_index] = get_image_from_stream(cap);
+    buff[buff_index] = get_image_from_stream_over_net(cap, buff[(buff_index+2) % 3]);
     if(buff[buff_index].data == 0) {
         demo_done = 1;
         return 0;
@@ -214,9 +228,12 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     if(filename){
         printf("video file: %s\n", filename);
         cap = open_video_stream(filename, 0, 0, 0, 0);
-    }else {
-        if(!stream_from_net)
+    }
+    else {
+        if(!stream_from_net) {
+            printf("Trying fetching stream from camera: %d\n", cam_index);
             cap = open_video_stream(0, cam_index, w, h, frames);
+        }
         else {
             printf("Trying fetching stream from network...\n");
         }
@@ -247,7 +264,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
             if(!prefix){
                 fps = 1./(what_time_is_it_now() - demo_time);
                 demo_time = what_time_is_it_now();
-                display_in_thread(0);
+                //display_in_thread(0);
             }else{
                 char name[256];
                 sprintf(name, "%s_%08d", prefix, count);
@@ -260,7 +277,7 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     } 
     else {
 
-        buff[0] =get_image_from_stream_over_net(cap);
+        buff[0] =get_image_from_stream_over_net(cap, buff[(buff_index+2) % 3]);
         buff[1] = copy_image(buff[0]);
         buff[2] = copy_image(buff[0]);
         buff_letter[0] = letterbox_image(buff[0], net->w, net->h);
@@ -276,12 +293,12 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     
         while(!demo_done){
             buff_index = (buff_index + 1) %3;
-            if(pthread_create(&fetch_thread, 0, fetch_in_thread, 0)) error("Thread creation failed");
+            if(pthread_create(&fetch_thread, 0, fetch_in_thread_over_net, 0)) error("Thread creation failed");
             if(pthread_create(&detect_thread, 0, detect_in_thread, 0)) error("Thread creation failed");
             if(!prefix){
                 fps = 1./(what_time_is_it_now() - demo_time);
                 demo_time = what_time_is_it_now();
-                display_in_thread(0);
+                //display_in_thread(0);
             }else{
                 char name[256];
                 sprintf(name, "%s_%08d", prefix, count);

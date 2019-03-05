@@ -100,13 +100,14 @@ image get_image_from_stream(void *p)
 #include <cstdio>
 
 
+#define TCP_SOCK
 
     int global_once = 0;
     int sock, listener;
-    struct sockaddr_in addr;
+    struct sockaddr_in addr, client_addr;
+    unsigned int addr_len;
 
-
-image get_image_from_stream_over_net(void *p)
+image get_image_from_stream_over_net(void *p, image im)
 {
 
 
@@ -121,11 +122,19 @@ image get_image_from_stream_over_net(void *p)
     //struct sockaddr_in addr;
     std::cerr << "canme to global_once" << std::endl;
 
+#ifdef TCP_SOCK
     if( (listener = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("[server] socket() failed");
         exit(1);
     }
-
+#else
+    if ((listener = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+    {
+        perror("socket");
+        exit(1);
+    }
+    addr_len = sizeof(struct sockaddr);
+#endif
     addr.sin_family = AF_INET;
     addr.sin_port = htons(5555); // 3425
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -134,21 +143,25 @@ image get_image_from_stream_over_net(void *p)
         perror("[server] binding faild!");
         exit(2);
     }
-
+#ifdef TCP_SOCK
     listen(listener, 1);
+#endif
     }
 
     int X = 640; //640
     int Y = 480;  //480
 
-    int num_of_recv_bytes;
+    int num_of_recv_bytes, num_of_send_bytes;
     //VideoWriter outputVideo;
     Size S = Size((int) X,(int) Y);
     //outputVideo.open("receive.avi", CV_FOURCC('M','J','P','G'), 30, S, true);
 
     int imgSize = Y*X*3;
     Mat frame = Mat::zeros(Y, X, CV_8UC3);
+    //Mat frame_draw = Mat::zeros(Y, X, CV_8UC3);
+    Mat frame_draw_resized = Mat::zeros(Y, X, CV_8UC3);
     uchar *iptr = frame.data;
+
     int key;
 
     int cnt=0;
@@ -156,18 +169,39 @@ image get_image_from_stream_over_net(void *p)
      if (global_once == 0) {
 
         std::cout << ++cnt<<std::endl;
+#ifdef TCP_SOCK
         sock = accept(listener, NULL, NULL);
         if(sock < 0){
             perror("[server] accept() faild!");
             exit(3);
         }
+#endif
 	global_once++;
-	}
+     }
 
         while(key != 'q') {
+#ifdef TCP_SOCK
             if( num_of_recv_bytes = recv(sock, iptr, imgSize, MSG_WAITALL) == -1 ) {
-                std::cerr << "recv failed, received bytes = " << num_of_recv_bytes << std::endl;
+                std::cerr << "tcp recv failed, received bytes = " << num_of_recv_bytes << std::endl;
             }
+#else
+          if( num_of_recv_bytes = recvfrom(sock, iptr, imgSize, 0, (struct sockaddr *)&client_addr, &addr_len) == -1 ) {
+                std::cerr << "udp recv failed, received bytes = " << num_of_recv_bytes << std::endl;
+            }
+#endif
+
+            Mat frame_draw = image_to_mat(im);
+
+           // Resize src so that is has the same size as img
+           //printf("height:%d, width=%d\n", frame_draw.size().height, frame_draw.size().width);
+           if (frame_draw.size().height > 0)
+                resize(frame_draw, frame_draw_resized, frame.size());
+
+            uchar *iptr_draw= frame_draw_resized.data;
+            if( num_of_send_bytes = send(sock, iptr_draw, imgSize, 0) < 0 ) {
+                std::cerr << "send failed, send bytes = " << num_of_send_bytes << std::endl;
+            }
+
 	    std::cout << "waiting, received bytes = " << num_of_recv_bytes << std::endl;
 
             //outputVideo<< frame;

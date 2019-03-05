@@ -77,7 +77,7 @@ void gemm_nn(int M, int N, int K, float ALPHA,
         float *C, int ldc)
 {
     int i,j,k;
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(i = 0; i < M; ++i){
         for(k = 0; k < K; ++k){
             register float A_PART = ALPHA*A[i*lda+k];
@@ -148,7 +148,8 @@ void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
         float BETA,
         float *C, int ldc)
 {
-    //printf("cpu: %d %d %d %d %d %f %d %d %f %d\n",TA, TB, M, N, K, ALPHA, lda, ldb, BETA, ldc);
+    //printf("A[1]=%f\n", A[1]); A[1]=1;
+    clock_t time = clock();
     int i, j;
     for(i = 0; i < M; ++i){
         for(j = 0; j < N; ++j){
@@ -163,6 +164,8 @@ void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
         gemm_nt(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
     else
         gemm_tt(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
+
+    printf("cpu: %d %d %d %d %d %d %f %d %d %f %d, %f\n",TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, sec(clock()-time) );
 }
 
 #ifdef GPU
@@ -175,10 +178,15 @@ void gemm_gpu(int TA, int TB, int M, int N, int K, float ALPHA,
         float BETA,
         float *C_gpu, int ldc)
 {
+    //printf("A_gpu[1]=%f\n", A_gpu[1]); A_gpu[1]=1;
+    clock_t start = clock(), end;
     cublasHandle_t handle = blas_handle();
     cudaError_t status = cublasSgemm(handle, (TB ? CUBLAS_OP_T : CUBLAS_OP_N), 
             (TA ? CUBLAS_OP_T : CUBLAS_OP_N), N, M, K, &ALPHA, B_gpu, ldb, A_gpu, lda, &BETA, C_gpu, ldc);
     check_error(status);
+    end = clock();
+    //printf("gpu: %d %d %d %d %d %d %f %d %d %f %d, %lf\n",TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, (float)sec(end-start));
+
 }
 
 #include <stdio.h>
@@ -204,7 +212,7 @@ void time_gpu_random_matrix(int TA, int TB, int m, int k, int n)
         gemm_gpu(TA,TB,m,n,k,1,a,lda,b,ldb,1,c,n);
     }
     end = clock();
-    printf("Matrix Multiplication %dx%d * %dx%d, TA=%d, TB=%d: %lf s\n",m,k,k,n, TA, TB, (float)(end-start)/CLOCKS_PER_SEC);
+    printf("Matrix Multiplication %dx%d * %dx%d, TA=%d, TB=%d: %lf s\n",m,k,k,n, TA, TB, (float)(end-start));
     free(a);
     free(b);
     free(c);
