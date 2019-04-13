@@ -141,7 +141,7 @@ void gemm_tt(int M, int N, int K, float ALPHA,
     }
 }
 
-
+static int iteration = 0;
 void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA, 
         float *A, int lda, 
         float *B, int ldb,
@@ -165,7 +165,34 @@ void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
     else
         gemm_tt(M, N, K, ALPHA,A,lda, B, ldb,C,ldc);
 
-    printf("cpu: %d %d %d %d %d %d %f %d %d %f %d, %f\n",TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, sec(clock()-time) );
+
+
+    printf("cpu: %d %d %d %d %d %d %f %d %d %f %d, %f\n", TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, sec(clock()-time));
+
+char fna[250], fnb[250], fnc[250];
+sprintf(fna, "/tmp/yolo_values_a_%d.txt", iteration);
+sprintf(fnb, "/tmp/yolo_values_b_%d.txt", iteration);
+sprintf(fnc, "/tmp/yolo_values_c_%d.txt", iteration);
+FILE *fda=fopen(fna, "w");
+FILE *fdb=fopen(fnb, "w");
+FILE *fdc=fopen(fnc, "w");
+iteration++;
+
+//fprintf(fda, "%d %d %d %d\n", M, N, M*N, (M-1)*lda+(K-1));
+//fprintf(fdb, "%d %d %d %d\n", N, K, N*K, (K-1)*ldb+(N-1));
+//fprintf(fdc, "%d %d %d %d\n", M, K, M*K, (M-1)*ldc+(N-1));
+
+for (i = 0; i < (M-1)*lda+(K-1); i++)
+  fprintf(fda, "%f\n", A[i]);
+for (i = 0; i < (K-1)*ldb+(N-1); i++)
+  fprintf(fdb, "%f\n", B[i]);
+for (i = 0; i < (M-1)*ldc+(N-1); i++)
+  fprintf(fdc, "%f\n", C[i]);
+
+fclose(fda);
+fclose(fdb);
+fclose(fdc);
+
 }
 
 #ifdef GPU
@@ -185,7 +212,7 @@ void gemm_gpu(int TA, int TB, int M, int N, int K, float ALPHA,
             (TA ? CUBLAS_OP_T : CUBLAS_OP_N), N, M, K, &ALPHA, B_gpu, ldb, A_gpu, lda, &BETA, C_gpu, ldc);
     check_error(status);
     end = clock();
-    //printf("gpu: %d %d %d %d %d %d %f %d %d %f %d, %lf\n",TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, (float)sec(end-start));
+    printf("gpu: %d %d %d\t%d\t%d\t%d\t%f %d %d %f %d, %lf\n",TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, (float)sec(end-start));
 
 }
 
