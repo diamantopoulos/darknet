@@ -1,12 +1,8 @@
 import cv2
-import io
 import socket
-import struct
-import time
-import pickle
-import zlib
 from PIL import Image
 import numpy as np
+import time
 
 def recvall(sock, n):
     # Helper function to recv n bytes or return None if EOF is hit
@@ -36,7 +32,9 @@ while True:
 
     size = len(frame)
 
-    print("{}: {}".format(img_counter, size))
+    print("{}: {}".format(img_counter, len(frame.data)))
+    start_time = time.time()
+
     bbytee = client_socket.send(frame.data)
     if (bbytee < 0):
         print("send failed")
@@ -45,14 +43,22 @@ while True:
 
     data_received = recvall(client_socket, bbytee)
 
+    time_elapsed = time.time() - start_time
+    bandwidth = (bbytee*2*4 / time_elapsed) / 1e6;
+    fps = 1 / (time_elapsed);
+    print("fps= " + str(fps) + ", BW= " + str(bandwidth) + " MB/s")
+
     if (bbytee < 0):
         print("recv failed")
-    else:
-        print("recv bytes " + str(len(data_received)))
+    #else:
+    #    print("recv bytes " + str(len(data_received)))
 
     imgSize = (width,height)# the image size
     img = Image.frombytes('RGB', imgSize, data_received)
     imgnp = np.asarray(img)
+    #print(type(imgnp))
+    #print(str(len(imgnp)))
+
     cv2.imshow('ImageWindow',imgnp)
     cv2.waitKey(1)
 
