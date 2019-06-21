@@ -22,10 +22,12 @@ client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client_socket.connect(('9.4.125.67', 5555))
 #connection = client_socket.makefile('wb')
 
+width=640
+height=480
 cam = cv2.VideoCapture(0)
 
-cam.set(3, 640);
-cam.set(4, 480);
+cam.set(3, width);
+cam.set(4, height);
 
 img_counter = 0
 
@@ -42,15 +44,13 @@ while True:
         print("sent bytes " + str(bbytee))
 
     data_received = recvall(client_socket, bbytee)
-#    client_socket.recvall(data_received, bbytee)
+
     if (bbytee < 0):
         print("recv failed")
     else:
         print("recv bytes " + str(len(data_received)))
 
-#    frame.data = data_received
-
-    imgSize = (640,480)# the image size
+    imgSize = (width,height)# the image size
     img = Image.frombytes('RGB', imgSize, data_received)
     imgnp = np.asarray(img)
     cv2.imshow('ImageWindow',imgnp)

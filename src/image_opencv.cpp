@@ -143,8 +143,12 @@ image get_image_from_stream_over_net(void *p, image im)
         perror("[server] binding faild!");
         exit(2);
     }
+    else
+        printf("bind OK\n");
 #ifdef TCP_SOCK
+    printf("before listen\n");    
     listen(listener, 1);
+    printf("after listen\n");
 #endif
     }
 
@@ -175,6 +179,8 @@ image get_image_from_stream_over_net(void *p, image im)
             perror("[server] accept() faild!");
             exit(3);
         }
+        else
+            printf("accept OK\n");
 #endif
 	global_once++;
      }
@@ -205,8 +211,8 @@ image get_image_from_stream_over_net(void *p, image im)
 	    std::cout << "waiting, received bytes = " << num_of_recv_bytes << std::endl;
 
             //outputVideo<< frame;
-            //imshow("server", frame);
-            //if (key = waitKey(100) >= 0) break;
+            imshow("server", frame);
+            if (key = waitKey(100) >= 0) break;
             break;
         }
         //outputVideo.release();
