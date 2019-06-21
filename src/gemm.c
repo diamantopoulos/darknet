@@ -167,7 +167,7 @@ void gemm_cpu(int TA, int TB, int M, int N, int K, float ALPHA,
 
 
 
-    printf("cpu: %d %d %d %d %d %d %f %d %d %f %d, %f\n", TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, sec(clock()-time));
+    printf("cpu: %d\t%d\t%d\t%d\t%d\t%d\t%f\t%d\t%d\t%f\t%d,\t%f\n", TA, TB, M, N, K, M*N*K, ALPHA, lda, ldb, BETA, ldc, sec(clock()-time));
 
 char fna[250], fnb[250], fnc[250];
 sprintf(fna, "/tmp/yolo_values_a_%d.txt", iteration);
